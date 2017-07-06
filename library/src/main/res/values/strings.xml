@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+  <!-- WebView -->
+  <string name="WebView_back">Retour</string>
+  <string name="WebView_forward">Avancer</string>
+  <string name="WebView_refresh">Rafraîchir</string>
+  <string name="WebView_openBrowser">Navigateur</string>
+
+  <string name="loading">Chargement\u2026</string>
+</resources>

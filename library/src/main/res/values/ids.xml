@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+  <item name="webview" type="id"/>
+  <item name="loading" type="id"/>
+  <item name="webViewActionBar" type="id"/>
+  <item name="title" type="id"/>
+  <item name="previousButton" type="id"/>
+  <item name="nextButton" type="id"/>
+  <item name="refreshButton" type="id"/>
+</resources>
