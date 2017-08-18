@@ -1,86 +1,153 @@
 package com.smartnsoft.webviewfragment;
 
-import com.smartnsoft.droid4me.support.v4.app.SmartFragment;
+import java.util.HashMap;
+import java.util.Map;
 
 import android.annotation.SuppressLint;
+import android.annotation.TargetApi;
+import android.content.BroadcastReceiver;
+import android.content.Context;
 import android.content.Intent;
+import android.content.IntentFilter;
 import android.graphics.Bitmap;
+import android.net.ConnectivityManager;
+import android.net.ConnectivityManager.NetworkCallback;
+import android.net.Network;
+import android.net.NetworkInfo;
+import android.net.NetworkRequest;
 import android.net.Uri;
+import android.os.Build;
 import android.os.Build.VERSION;
+import android.os.Build.VERSION_CODES;
 import android.os.Bundle;
 import android.support.v4.view.MenuItemCompat;
-import android.support.v7.app.ActionBar;
-import android.support.v7.app.ActionBarActivity;
 import android.support.v7.app.AppCompatActivity;
-import android.view.GestureDetector;
 import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.MenuInflater;
 import android.view.MenuItem;
-import android.view.MotionEvent;
 import android.view.View;
+import android.view.View.OnClickListener;
 import android.view.ViewGroup;
+import android.view.animation.Animation;
+import android.view.animation.Animation.AnimationListener;
+import android.view.animation.AnimationUtils;
+import android.webkit.CookieManager;
 import android.webkit.WebResourceError;
 import android.webkit.WebResourceRequest;
 import android.webkit.WebSettings;
-import android.webkit.WebSettings.PluginState;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
+import android.widget.Button;
+
+import com.smartnsoft.droid4me.LifeCycle.BusinessObjectsRetrievalAsynchronousPolicyAnnotation;
+import com.smartnsoft.droid4me.support.v4.app.SmartFragment;
 
 /**
- * @author Édouard Mercier
- * @since 2014.04.21
+ * @author Ludovic Roland
+ * @since 2016.06.03
  */
-public abstract class WebViewFragment<AggregateClass>
+@BusinessObjectsRetrievalAsynchronousPolicyAnnotation
+public class WebViewFragment<AggregateClass>
     extends SmartFragment<AggregateClass>
+    implements OnClickListener
 {
 
-  protected enum LayoutViewStringDrawableResource
+  public static final String PAGE_URL_EXTRA = "pageUrlExtra";
+
+  public static final String SCREEN_TITLE_EXTRA = "screenTitleExtra";
+
+  //Views
+  protected View loadingErrorAndRetry;
+
+  protected View errorAndRetry;
+
+  protected WebView webView;
+
+  protected Button retry;
+
+  //webview state
+  protected boolean webViewRestored = false;
+
+  protected boolean errorWhenLoadingPage = false;
+
+  protected String url;
+
+  //network state
+  protected boolean hasConnectivity = true;
+
+  protected final BroadcastReceiver broadcastReceiver = new BroadcastReceiver()
   {
-    // The layouts
-    LayoutWebView,
-    // The View identifiers
-    IdWebView, IdLoading, IdWebViewActionBar, IdTitle, IdPreviousButton, IdNextButton, IdRefreshButton,
-    // The strings
-    StringBack, StringForward, StringRefresh, StringOpenBrowser,
-    // The drawables
-    DrawableBarPreviousDefault, DrawableBarNextDefault, DrawableBarPreviousDisabled, DrawableBarNextDisabled, DrawableBarRefresh, DrawableBarOpenBrowser
-  }
+    @Override
+    public void onReceive(Context context, Intent intent)
+    {
+      hasConnectivity = intent.getBooleanExtra(ConnectivityManager.EXTRA_NO_CONNECTIVITY, false) == false;
+    }
+  };
 
-  public static final String PAGE_URL = "pageUrl";
+  protected NetworkCallback networkCallback;
 
-  public static final String SCREEN_TITLE = "screenTitle";
-
-  private String url;
-
-  private WebView webView;
-
-  private View loading;
-
-  private boolean webViewRestored = false;
+  protected Map<String, Boolean> networkStatus = new HashMap<>();
 
   @Override
-  public void onRetrieveDisplayObjects()
+  public void onCreate(Bundle savedInstanceState)
   {
+    super.onCreate(savedInstanceState);
+    final NetworkInfo activeNetworkInfo = getActiveNetworkInfo();
+    if (activeNetworkInfo == null || activeNetworkInfo.isConnected() == false)
+    {
+      hasConnectivity = false;
+    }
+
+    if (Build.VERSION.SDK_INT < Build.VERSION_CODES.LOLLIPOP)
+    {
+      registerBroadcastListenerOnCreate();
+    }
+    else
+    {
+      registerBroadcastListenerOnCreateLollipopAndAbove();
+    }
   }
 
-  @SuppressWarnings("deprecation")
   @SuppressLint("SetJavaScriptEnabled")
   @Override
   public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState)
   {
-    final View view = inflater.inflate(getLayoutResourceId(LayoutViewStringDrawableResource.LayoutWebView), container, false);
-    webView = (WebView) view.findViewById(getViewResourceId(LayoutViewStringDrawableResource.IdWebView));
+    final View rootView = inflater.inflate(R.layout.web_view, container, false);
+
+    webView = rootView.findViewById(R.id.webview);
+    loadingErrorAndRetry = rootView.findViewById(R.id.loadingErrorAndRetry);
+    errorAndRetry = rootView.findViewById(R.id.errorAndRetry);
+    retry = rootView.findViewById(R.id.retry);
+
+    retry.setOnClickListener(this);
+
+    // Cookies management
+    CookieManager.setAcceptFileSchemeCookies(true);
+    CookieManager.getInstance().setAcceptCookie(true);
+
+    if (VERSION.SDK_INT >= VERSION_CODES.LOLLIPOP)
+    {
+      CookieManager.getInstance().setAcceptThirdPartyCookies(webView, true);
+      CookieManager.getInstance().flush();
+    }
+
     final WebSettings webSettings = webView.getSettings();
     webSettings.setJavaScriptEnabled(true);
-    // We enable Flash and Javascript in order to have the WatTv videos working
-    if (VERSION.SDK_INT >= 8 && VERSION.SDK_INT <= 18)
+
+    if (VERSION.SDK_INT >= VERSION_CODES.JELLY_BEAN)
     {
-      webSettings.setPluginState(PluginState.ON);
+      webView.getSettings().setAllowUniversalAccessFromFileURLs(true);
+      webView.getSettings().setAllowFileAccessFromFileURLs(true);
     }
-    loading = view.findViewById(getViewResourceId(LayoutViewStringDrawableResource.IdLoading));
-    loading.setVisibility(View.INVISIBLE);
-    if (savedInstanceState != null && savedInstanceState.isEmpty() == false)
+
+    // Cache management
+    webView.getSettings().setAppCachePath(getActivity().getApplicationContext().getCacheDir().getAbsolutePath());
+    webView.getSettings().setAllowFileAccess(true);
+    webView.getSettings().setAppCacheEnabled(true);
+    webView.getSettings().setCacheMode(WebSettings.LOAD_DEFAULT);
+
+    if (savedInstanceState != null)
     {
       webView.restoreState(savedInstanceState);
       webViewRestored = true;
@@ -89,70 +156,41 @@ public abstract class WebViewFragment<AggregateClass>
     {
       webViewRestored = false;
     }
-    // This call is positioned at this level, so as to prevent issues with the "onCreateOptionsMenu()" method
-    setHasOptionsMenu(true);
-    {
-      // We listen to scroll events
-      final GestureDetector.SimpleOnGestureListener gestureListener = new GestureDetector.SimpleOnGestureListener()
-      {
-        @Override
-        public boolean onScroll(MotionEvent event1, MotionEvent event2, float distanceX, float distanceY)
-        {
-          if (distanceY > 0)
-          {
-            hideActionBarIfNecessary();
-          }
-          else if (distanceY < 0)
-          {
-            showActionBarIfNecessary();
-          }
-          return false;
-        }
-      };
-      final GestureDetector gestureDetector = new GestureDetector(getActivity().getApplicationContext(), gestureListener);
-      // This is essential, otherwise the long-press events are not transmitted properly!
-      gestureDetector.setIsLongpressEnabled(false);
-      webView.setOnTouchListener(new View.OnTouchListener()
-      {
-        @Override
-        public boolean onTouch(View view, MotionEvent event)
-        {
-          gestureDetector.onTouchEvent(event);
-          return false;
-        }
-      });
-    }
-    getActivity().setTitle(getActivity().getIntent().getStringExtra(WebViewFragment.SCREEN_TITLE));
-    getActivity().supportInvalidateOptionsMenu();
-    return view;
+
+    configureWebView();
+
+    return rootView;
   }
 
   @Override
   public void onCreateOptionsMenu(Menu menu, MenuInflater menuInflater)
   {
     super.onCreateOptionsMenu(menu, menuInflater);
+
     {
-      final MenuItem menuItem = menu.add(Menu.NONE, Menu.NONE, Menu.NONE, getStringResourceId(LayoutViewStringDrawableResource.StringBack)).setIcon(
-          getDrawableResourceId(webView.canGoBack() == true ? LayoutViewStringDrawableResource.DrawableBarPreviousDefault
-              : LayoutViewStringDrawableResource.DrawableBarPreviousDisabled)).setOnMenuItemClickListener(new MenuItem.OnMenuItemClickListener()
+      final MenuItem menuItem = menu.add(Menu.NONE, Menu.NONE, Menu.NONE, R.string.WebView_back)
+          .setIcon(webView.canGoBack() == true ? R.drawable.ic_web_view_bar_previous_default : R.drawable.ic_web_view_bar_previous_disabled)
+          .setOnMenuItemClickListener(new MenuItem.OnMenuItemClickListener()
+          {
+            @Override
+            public boolean onMenuItemClick(MenuItem menuItem)
+            {
+              if (webView.canGoBack() == true)
               {
-                @Override
-                public boolean onMenuItemClick(MenuItem menuItem)
-                {
-                  if (webView.canGoBack() == true)
-                  {
-                    webView.goBack();
-                  }
-                  return true;
-                }
-              });
+                webView.goBack();
+              }
+              return true;
+            }
+          });
       // In order to be compatible with Android v2.3-: see
       // http://stackoverflow.com/questions/17873648/android-support-library-actionbar-not-working-in-2-3-device
       MenuItemCompat.setShowAsAction(menuItem, MenuItemCompat.SHOW_AS_ACTION_ALWAYS);
     }
+
     {
-      final MenuItem menuItem = menu.add(Menu.NONE, Menu.NONE, Menu.NONE, getStringResourceId(LayoutViewStringDrawableResource.StringRefresh)).setIcon(
-          getDrawableResourceId(LayoutViewStringDrawableResource.DrawableBarRefresh)).setOnMenuItemClickListener(new MenuItem.OnMenuItemClickListener()
+      final MenuItem menuItem = menu.add(Menu.NONE, Menu.NONE, Menu.NONE, R.string.WebView_refresh)
+          .setIcon(R.drawable.ic_bar_refresh)
+          .setOnMenuItemClickListener(new MenuItem.OnMenuItemClickListener()
           {
             @Override
             public boolean onMenuItemClick(MenuItem menuItem)
@@ -163,26 +201,29 @@ public abstract class WebViewFragment<AggregateClass>
           });
       MenuItemCompat.setShowAsAction(menuItem, MenuItemCompat.SHOW_AS_ACTION_ALWAYS);
     }
+
     {
-      final MenuItem menuItem = menu.add(Menu.NONE, Menu.NONE, Menu.NONE, getStringResourceId(LayoutViewStringDrawableResource.StringForward)).setIcon(
-          getDrawableResourceId(webView.canGoForward() == true ? LayoutViewStringDrawableResource.DrawableBarNextDefault
-              : LayoutViewStringDrawableResource.DrawableBarNextDisabled)).setOnMenuItemClickListener(new MenuItem.OnMenuItemClickListener()
+      final MenuItem menuItem = menu.add(Menu.NONE, Menu.NONE, Menu.NONE, R.string.WebView_forward)
+          .setIcon(webView.canGoForward() == true ? R.drawable.ic_web_view_bar_next_default : R.drawable.ic_web_view_bar_next_disabled)
+          .setOnMenuItemClickListener(new MenuItem.OnMenuItemClickListener()
+          {
+            @Override
+            public boolean onMenuItemClick(MenuItem menuItem)
+            {
+              if (webView.canGoForward() == true)
               {
-                @Override
-                public boolean onMenuItemClick(MenuItem menuItem)
-                {
-                  if (webView.canGoForward() == true)
-                  {
-                    webView.goForward();
-                  }
-                  return true;
-                }
-              });
+                webView.goForward();
+              }
+              return true;
+            }
+          });
       MenuItemCompat.setShowAsAction(menuItem, MenuItemCompat.SHOW_AS_ACTION_ALWAYS);
     }
+
     {
-      final MenuItem menuItem = menu.add(Menu.NONE, Menu.NONE, Menu.NONE, getStringResourceId(LayoutViewStringDrawableResource.StringOpenBrowser)).setIcon(
-          getDrawableResourceId(LayoutViewStringDrawableResource.DrawableBarOpenBrowser)).setOnMenuItemClickListener(new MenuItem.OnMenuItemClickListener()
+      final MenuItem menuItem = menu.add(Menu.NONE, Menu.NONE, Menu.NONE, R.string.WebView_openBrowser)
+          .setIcon(R.drawable.ic_bar_open_browser)
+          .setOnMenuItemClickListener(new MenuItem.OnMenuItemClickListener()
           {
             @Override
             public boolean onMenuItemClick(MenuItem menuItem)
@@ -204,96 +245,63 @@ public abstract class WebViewFragment<AggregateClass>
           });
       MenuItemCompat.setShowAsAction(menuItem, MenuItemCompat.SHOW_AS_ACTION_ALWAYS);
     }
+
+  }
+
+  @Override
+  public void onRetrieveDisplayObjects()
+  {
+
   }
 
   @Override
   public void onRetrieveBusinessObjects()
       throws BusinessObjectUnavailableException
   {
-    url = getActivity().getIntent().getStringExtra(WebViewFragment.PAGE_URL);
+    url = getActivity().getIntent().getStringExtra(WebViewFragment.PAGE_URL_EXTRA);
   }
 
   @Override
   public void onFulfillDisplayObjects()
   {
-    final WebViewClient webViewClient = new WebViewClient()
+    if (getActivity().getIntent().hasExtra(WebViewFragment.SCREEN_TITLE_EXTRA) == false)
     {
-
-      @Override
-      public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest request)
+      try
       {
-        if (isAlive() == true)
+        if (getActivity() instanceof AppCompatActivity)
         {
-          showActionBarIfNecessary();
-          getActivity().supportInvalidateOptionsMenu();
-        }
-
-        return super.shouldOverrideUrlLoading(view, request);
-      }
-
-      @Override
-      public void onPageStarted(WebView view, String url, Bitmap favicon)
-      {
-        super.onPageStarted(view, url, favicon);
-        if (isAlive() == true)
-        {
-          // loading.setVisibility(View.VISIBLE);
-          getActivity().supportInvalidateOptionsMenu();
-          getActivity().setProgressBarIndeterminateVisibility(true);
+          ((AppCompatActivity) getActivity()).getSupportActionBar().setTitle(webView.getTitle());
         }
       }
-
-      @Override
-      public void onPageFinished(WebView view, String url)
+      catch (Exception exception)
       {
-        super.onPageFinished(view, url);
-        if (isAlive() == true)
+        if (log.isWarnEnabled() == true)
         {
-          if (getActivity().getIntent().hasExtra(WebViewFragment.SCREEN_TITLE) == false)
-          {
-            if (getActivity() instanceof ActionBarActivity)
-            {
-              ((ActionBarActivity) getActivity()).getSupportActionBar().setTitle(webView.getTitle());
-            }
-            else if (getActivity() instanceof AppCompatActivity)
-            {
-              ((AppCompatActivity) getActivity()).getSupportActionBar().setTitle(webView.getTitle());
-            }
-            else
-            {
-              getActivity().getActionBar().setTitle(webView.getTitle());
-            }
-          }
-
-          getActivity().supportInvalidateOptionsMenu();
-          getActivity().setProgressBarIndeterminateVisibility(false);
+          log.warn("Cannot set the title", exception);
         }
       }
-
-      @Override
-      public void onReceivedError(WebView view, WebResourceRequest request, WebResourceError error)
-      {
-        // TODO: decide something
-
-        super.onReceivedError(view, request, error);
-      }
-
-    };
-    webView.setWebViewClient(webViewClient);
-
-    if (webViewRestored == false)
-    {
-      webView.loadUrl(url);
     }
-
-    // For the Android v2.3- support: read
-    // http://stackoverflow.com/questions/17879026/2-3-android-device-natigation-drawer-not-geting-method-getactionbar
-    getActivity().supportInvalidateOptionsMenu();
   }
 
   @Override
   public void onSynchronizeDisplayObjects()
   {
+
+  }
+
+  @Override
+  public void onDestroy()
+  {
+    super.onDestroy();
+
+    if (Build.VERSION.SDK_INT < Build.VERSION_CODES.LOLLIPOP)
+    {
+      unregisterBroadcastListenerOnDestroy();
+    }
+    else
+    {
+      unregisterBroadcastListenerLollipopAndAbove();
+    }
   }
 
   @Override
@@ -303,140 +311,198 @@ public abstract class WebViewFragment<AggregateClass>
     webView.saveState(outState);
   }
 
-  protected int getLayoutResourceId(LayoutViewStringDrawableResource layoutIdResource)
+  @Override
+  public void onClick(View view)
   {
-    switch (layoutIdResource)
+    if (view.equals(retry) == true)
     {
-    case LayoutWebView:
-    default:
-      return getResources().getIdentifier("web_view", "layout", getActivity().getPackageName());
+      refresh();
     }
   }
 
-  protected int getViewResourceId(LayoutViewStringDrawableResource layoutIdResource)
+  protected void showLoadingScreen(boolean visible)
   {
-    final String resourceName;
-    switch (layoutIdResource)
+    if (visible == true)
     {
-    case IdWebView:
-      resourceName = "webview";
-      break;
-    case IdLoading:
-      resourceName = "loading";
-      break;
-    case IdWebViewActionBar:
-      resourceName = "webViewActionBar";
-      break;
-    case IdTitle:
-      resourceName = "title";
-      break;
-    case IdPreviousButton:
-      resourceName = "previousButton";
-      break;
-    case IdNextButton:
-      resourceName = "nextButton";
-      break;
-    case IdRefreshButton:
-      resourceName = "refreshButton";
-      break;
-    default:
-      resourceName = "";
-      break;
+      errorAndRetry.setVisibility(View.INVISIBLE);
+      loadingErrorAndRetry.setVisibility(View.VISIBLE);
     }
-    return getResources().getIdentifier(resourceName, "id", getActivity().getPackageName());
-  }
-
-  protected int getStringResourceId(LayoutViewStringDrawableResource layoutIdResource)
-  {
-    final String resourceName;
-    switch (layoutIdResource)
+    else
     {
-    case StringBack:
-      resourceName = "WebView_back";
-      break;
-    case StringForward:
-      resourceName = "WebView_forward";
-      break;
-    case StringRefresh:
-      resourceName = "WebView_refresh";
-      break;
-    case StringOpenBrowser:
-      resourceName = "WebView_openBrowser";
-      break;
-    default:
-      resourceName = "";
-      break;
-    }
-    return getResources().getIdentifier(resourceName, "string", getActivity().getPackageName());
-  }
-
-  protected int getDrawableResourceId(LayoutViewStringDrawableResource layoutIdResource)
-  {
-    final String resourceName;
-    switch (layoutIdResource)
-    {
-    case DrawableBarPreviousDefault:
-      resourceName = "ic_web_view_bar_previous_default";
-      break;
-    case DrawableBarNextDefault:
-      resourceName = "ic_web_view_bar_next_default";
-      break;
-    case DrawableBarPreviousDisabled:
-      resourceName = "ic_web_view_bar_previous_disabled";
-      break;
-    case DrawableBarNextDisabled:
-      resourceName = "ic_web_view_bar_next_disabled";
-      break;
-    case DrawableBarRefresh:
-      resourceName = "ic_bar_refresh";
-      break;
-    case DrawableBarOpenBrowser:
-      resourceName = "ic_bar_open_browser";
-      break;
-    default:
-      resourceName = "";
-      break;
-    }
-    return getResources().getIdentifier(resourceName, "drawable", getActivity().getPackageName());
-  }
-
-  private void hideActionBarIfNecessary()
-  {
-    try
-    {
-      final ActionBar actionBar = ((ActionBarActivity) getActivity()).getSupportActionBar();
-      if (actionBar.isShowing() == true)
+      if (getActivity() != null && getActivity().isFinishing() == false)
       {
-        actionBar.hide();
+        final Animation animation = AnimationUtils.loadAnimation(getActivity(), android.R.anim.fade_out);
+        animation.setAnimationListener(new AnimationListener()
+        {
+          @Override
+          public void onAnimationStart(Animation animation)
+          {
+          }
+
+          @Override
+          public void onAnimationEnd(Animation animation)
+          {
+            loadingErrorAndRetry.setVisibility(View.INVISIBLE);
+          }
+
+          @Override
+          public void onAnimationRepeat(Animation animation)
+          {
+          }
+
+        });
+
+        loadingErrorAndRetry.startAnimation(animation);
       }
-    }
-    catch (NoClassDefFoundError exception)
-    {
-      final android.app.ActionBar actionBar = getActivity().getActionBar();
-      if (actionBar.isShowing() == true)
+      else
       {
-        actionBar.hide();
+        errorAndRetry.setVisibility(View.INVISIBLE);
+        loadingErrorAndRetry.setVisibility(View.INVISIBLE);
       }
     }
   }
 
-  private void showActionBarIfNecessary()
+  protected void showErrorScreen()
   {
-    try
+    errorAndRetry.setVisibility(View.VISIBLE);
+    loadingErrorAndRetry.setVisibility(View.VISIBLE);
+  }
+
+  protected void refresh()
+  {
+    if (hasConnectivity == true)
     {
-      final ActionBar actionBar = ((ActionBarActivity) getActivity()).getSupportActionBar();
-      if (actionBar.isShowing() == false)
+      if (webView.getUrl() != null)
       {
-        actionBar.show();
+        webView.reload();
+      }
+      else
+      {
+        webView.loadUrl(url);
+      }
+      errorWhenLoadingPage = false;
+    }
+    else
+    {
+      showErrorScreen();
+    }
+  }
+
+  private void registerBroadcastListenerOnCreate()
+  {
+    final IntentFilter intentFilter = new IntentFilter(ConnectivityManager.CONNECTIVITY_ACTION);
+    getContext().registerReceiver(broadcastReceiver, intentFilter);
+  }
+
+  @TargetApi(VERSION_CODES.LOLLIPOP)
+  private void registerBroadcastListenerOnCreateLollipopAndAbove()
+  {
+    if (networkCallback == null)
+    {
+      final NetworkRequest.Builder builder = new NetworkRequest.Builder();
+      networkCallback = new ConnectivityManager.NetworkCallback()
+      {
+        @Override
+        public void onAvailable(Network network)
+        {
+          networkStatus.put(network.toString(), true);
+          hasConnectivity = networkStatus.containsValue(true);
+        }
+
+        @Override
+        public void onLost(Network network)
+        {
+          networkStatus.remove(network.toString());
+          hasConnectivity = networkStatus.containsValue(true);
+        }
+      };
+
+      getConnectivityManager().registerNetworkCallback(builder.build(), networkCallback);
+    }
+  }
+
+  private void unregisterBroadcastListenerOnDestroy()
+  {
+    getContext().unregisterReceiver(broadcastReceiver);
+  }
+
+  @TargetApi(VERSION_CODES.LOLLIPOP)
+  private void unregisterBroadcastListenerLollipopAndAbove()
+  {
+    // We listen to the network connection potential issues: we do not want child activities to also register for the connectivity change events
+    if (networkCallback != null)
+    {
+      getConnectivityManager().unregisterNetworkCallback(networkCallback);
+      networkCallback = null;
+    }
+  }
+
+  private NetworkInfo getActiveNetworkInfo()
+  {
+    return getConnectivityManager().getActiveNetworkInfo();
+  }
+
+  private ConnectivityManager getConnectivityManager()
+  {
+    return ((ConnectivityManager) getContext().getSystemService(Context.CONNECTIVITY_SERVICE));
+  }
+
+  private void configureWebView()
+  {
+    final WebViewClient webViewClient = new WebViewClient()
+    {
+
+      @Override
+      public void onPageStarted(WebView view, String url, Bitmap favicon)
+      {
+        super.onPageStarted(view, url, favicon);
+        showLoadingScreen(true);
+      }
+
+      @Override
+      public void onPageFinished(WebView view, String currentURL)
+      {
+        super.onPageFinished(view, currentURL);
+
+        if (errorWhenLoadingPage == false && hasConnectivity == true)
+        {
+          showLoadingScreen(false);
+        }
+        else
+        {
+          showErrorScreen();
+        }
+      }
+
+      @Override
+      public void onReceivedError(WebView view, int errorCode, String description, String failingUrl)
+      {
+        super.onReceivedError(view, errorCode, description, failingUrl);
+        errorWhenLoadingPage = true;
+        showErrorScreen();
+      }
+
+      @Override
+      public void onReceivedError(WebView view, WebResourceRequest request, WebResourceError error)
+      {
+        super.onReceivedError(view, request, error);
+        errorWhenLoadingPage = true;
+        showErrorScreen();
+      }
+    };
+
+    webView.setWebViewClient(webViewClient);
+
+    if (hasConnectivity == true)
+    {
+      if (webViewRestored == false)
+      {
+        webView.loadUrl(url);
       }
     }
-    catch (NoClassDefFoundError exception)
+    else
     {
-      final android.app.ActionBar actionBar = getActivity().getActionBar();
-      if (actionBar.isShowing() == false)
-      {
-        actionBar.show();
-      }
+      showErrorScreen();
     }
   }
 

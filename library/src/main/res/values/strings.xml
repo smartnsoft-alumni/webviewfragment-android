@@ -7,4 +7,8 @@
   <string name="WebView_openBrowser">Navigateur</string>
 
   <string name="loading">Chargement\u2026</string>
+  <string name="webviewConnectivityProblem">Il semble que votre appareil ne soit pas connecté à Internet. Veuillez svp
+    vérifier votre connexion WiFi / mobile et essayez à nouveau
+  </string>
+  <string name="webviewRetry">Réessayer</string>
 </resources>

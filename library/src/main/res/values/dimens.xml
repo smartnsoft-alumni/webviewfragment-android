@@ -2,4 +2,6 @@
 <resources>
   <dimen name="paddingSmall">3dip</dimen>
   <dimen name="paddingXLarge">15dip</dimen>
+  <dimen name="dimen10dip">10dip</dimen>
+  <dimen name="dimen40dip">40dip</dimen>
 </resources>
