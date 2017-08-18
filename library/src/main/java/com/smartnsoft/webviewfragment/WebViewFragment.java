@@ -283,6 +283,7 @@ public class WebViewFragment<AggregateClass>
     }
 
     configureWebView();
+    refreshMenu();
   }
 
   @Override
@@ -390,6 +391,14 @@ public class WebViewFragment<AggregateClass>
     }
   }
 
+  private void refreshMenu()
+  {
+    if (getActivity() != null && getActivity().isFinishing() == false)
+    {
+      getActivity().supportInvalidateOptionsMenu();
+    }
+  }
+
   private void registerBroadcastListenerOnCreate()
   {
     final IntentFilter intentFilter = new IntentFilter(ConnectivityManager.CONNECTIVITY_ACTION);
@@ -459,6 +468,7 @@ public class WebViewFragment<AggregateClass>
       {
         super.onPageStarted(view, url, favicon);
         showLoadingScreen(true);
+        refreshMenu();
       }
 
       @Override
@@ -474,6 +484,8 @@ public class WebViewFragment<AggregateClass>
         {
           showErrorScreen();
         }
+
+        refreshMenu();
       }
 
       @Override
@@ -482,6 +494,7 @@ public class WebViewFragment<AggregateClass>
         super.onReceivedError(view, errorCode, description, failingUrl);
         errorWhenLoadingPage = true;
         showErrorScreen();
+        refreshMenu();
       }
 
       @Override
@@ -490,6 +503,7 @@ public class WebViewFragment<AggregateClass>
         super.onReceivedError(view, request, error);
         errorWhenLoadingPage = true;
         showErrorScreen();
+        refreshMenu();
       }
     };
 
