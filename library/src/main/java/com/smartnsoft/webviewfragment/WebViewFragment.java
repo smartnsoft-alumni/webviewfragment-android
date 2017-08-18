@@ -115,6 +115,8 @@ public class WebViewFragment<AggregateClass>
   {
     final View rootView = inflater.inflate(R.layout.web_view, container, false);
 
+    setHasOptionsMenu(true);
+
     webView = rootView.findViewById(R.id.webview);
     loadingErrorAndRetry = rootView.findViewById(R.id.loadingErrorAndRetry);
     errorAndRetry = rootView.findViewById(R.id.errorAndRetry);
@@ -156,8 +158,6 @@ public class WebViewFragment<AggregateClass>
     {
       webViewRestored = false;
     }
-
-    configureWebView();
 
     return rootView;
   }
@@ -281,6 +281,8 @@ public class WebViewFragment<AggregateClass>
         }
       }
     }
+
+    configureWebView();
   }
 
   @Override
