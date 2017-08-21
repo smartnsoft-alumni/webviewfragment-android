@@ -13,7 +13,7 @@ android
     targetSdkVersion 26
 
     versionCode 3
-    versionName "2.0.0.002-SNAPSHOT"
+    versionName "2.0"
   }
 
   buildTypes
@@ -29,7 +29,7 @@ android
 
 dependencies
 {
-  compile("com.smartnsoft:droid4me:2.5.2")
+  compile("com.smartnsoft:droid4me:2.5.3")
 }
 
 
