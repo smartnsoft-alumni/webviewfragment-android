@@ -40,14 +40,14 @@ import android.webkit.WebView;
 import android.webkit.WebViewClient;
 import android.widget.Button;
 
-import com.smartnsoft.droid4me.LifeCycle.BusinessObjectsRetrievalAsynchronousPolicyAnnotation;
+import com.smartnsoft.droid4me.LifeCycle.BusinessObjectsRetrievalAsynchronousPolicy;
 import com.smartnsoft.droid4me.support.v4.app.SmartFragment;
 
 /**
  * @author Ludovic Roland
  * @since 2016.06.03
  */
-@BusinessObjectsRetrievalAsynchronousPolicyAnnotation
+@BusinessObjectsRetrievalAsynchronousPolicy
 public class WebViewFragment<AggregateClass>
     extends SmartFragment<AggregateClass>
     implements OnClickListener

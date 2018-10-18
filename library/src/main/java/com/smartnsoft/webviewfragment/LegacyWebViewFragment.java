@@ -8,7 +8,6 @@ import android.os.Build.VERSION;
 import android.os.Bundle;
 import android.support.v4.view.MenuItemCompat;
 import android.support.v7.app.ActionBar;
-import android.support.v7.app.ActionBarActivity;
 import android.support.v7.app.AppCompatActivity;
 import android.view.GestureDetector;
 import android.view.LayoutInflater;
@@ -136,17 +135,17 @@ public abstract class LegacyWebViewFragment<AggregateClass>
       final MenuItem menuItem = menu.add(Menu.NONE, Menu.NONE, Menu.NONE, getStringResourceId(LayoutViewStringDrawableResource.StringBack)).setIcon(
           getDrawableResourceId(webView.canGoBack() == true ? LayoutViewStringDrawableResource.DrawableBarPreviousDefault
               : LayoutViewStringDrawableResource.DrawableBarPreviousDisabled)).setOnMenuItemClickListener(new MenuItem.OnMenuItemClickListener()
-              {
-                @Override
-                public boolean onMenuItemClick(MenuItem menuItem)
-                {
-                  if (webView.canGoBack() == true)
-                  {
-                    webView.goBack();
-                  }
-                  return true;
-                }
-              });
+      {
+        @Override
+        public boolean onMenuItemClick(MenuItem menuItem)
+        {
+          if (webView.canGoBack() == true)
+          {
+            webView.goBack();
+          }
+          return true;
+        }
+      });
       // In order to be compatible with Android v2.3-: see
       // http://stackoverflow.com/questions/17873648/android-support-library-actionbar-not-working-in-2-3-device
       MenuItemCompat.setShowAsAction(menuItem, MenuItemCompat.SHOW_AS_ACTION_ALWAYS);
@@ -154,55 +153,55 @@ public abstract class LegacyWebViewFragment<AggregateClass>
     {
       final MenuItem menuItem = menu.add(Menu.NONE, Menu.NONE, Menu.NONE, getStringResourceId(LayoutViewStringDrawableResource.StringRefresh)).setIcon(
           getDrawableResourceId(LayoutViewStringDrawableResource.DrawableBarRefresh)).setOnMenuItemClickListener(new MenuItem.OnMenuItemClickListener()
-          {
-            @Override
-            public boolean onMenuItemClick(MenuItem menuItem)
-            {
-              webView.reload();
-              return true;
-            }
-          });
+      {
+        @Override
+        public boolean onMenuItemClick(MenuItem menuItem)
+        {
+          webView.reload();
+          return true;
+        }
+      });
       MenuItemCompat.setShowAsAction(menuItem, MenuItemCompat.SHOW_AS_ACTION_ALWAYS);
     }
     {
       final MenuItem menuItem = menu.add(Menu.NONE, Menu.NONE, Menu.NONE, getStringResourceId(LayoutViewStringDrawableResource.StringForward)).setIcon(
           getDrawableResourceId(webView.canGoForward() == true ? LayoutViewStringDrawableResource.DrawableBarNextDefault
               : LayoutViewStringDrawableResource.DrawableBarNextDisabled)).setOnMenuItemClickListener(new MenuItem.OnMenuItemClickListener()
-              {
-                @Override
-                public boolean onMenuItemClick(MenuItem menuItem)
-                {
-                  if (webView.canGoForward() == true)
-                  {
-                    webView.goForward();
-                  }
-                  return true;
-                }
-              });
+      {
+        @Override
+        public boolean onMenuItemClick(MenuItem menuItem)
+        {
+          if (webView.canGoForward() == true)
+          {
+            webView.goForward();
+          }
+          return true;
+        }
+      });
       MenuItemCompat.setShowAsAction(menuItem, MenuItemCompat.SHOW_AS_ACTION_ALWAYS);
     }
     {
       final MenuItem menuItem = menu.add(Menu.NONE, Menu.NONE, Menu.NONE, getStringResourceId(LayoutViewStringDrawableResource.StringOpenBrowser)).setIcon(
           getDrawableResourceId(LayoutViewStringDrawableResource.DrawableBarOpenBrowser)).setOnMenuItemClickListener(new MenuItem.OnMenuItemClickListener()
+      {
+        @Override
+        public boolean onMenuItemClick(MenuItem menuItem)
+        {
+          final String actualUrl = webView.getUrl() != null ? webView.getUrl() : url;
+          try
           {
-            @Override
-            public boolean onMenuItemClick(MenuItem menuItem)
+            startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse(actualUrl)));
+          }
+          catch (Exception exception)
+          {
+            if (log.isWarnEnabled())
             {
-              final String actualUrl = webView.getUrl() != null ? webView.getUrl() : url;
-              try
-              {
-                startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse(actualUrl)));
-              }
-              catch (Exception exception)
-              {
-                if (log.isWarnEnabled())
-                {
-                  log.warn("Could not open the native browser application for displaying the Internet page with URL '" + url + "'", exception);
-                }
-              }
-              return true;
+              log.warn("Could not open the native browser application for displaying the Internet page with URL '" + url + "'", exception);
             }
-          });
+          }
+          return true;
+        }
+      });
       MenuItemCompat.setShowAsAction(menuItem, MenuItemCompat.SHOW_AS_ACTION_ALWAYS);
     }
   }
@@ -252,9 +251,9 @@ public abstract class LegacyWebViewFragment<AggregateClass>
         {
           if (getActivity().getIntent().hasExtra(LegacyWebViewFragment.SCREEN_TITLE) == false)
           {
-            if (getActivity() instanceof ActionBarActivity)
+            if (getActivity() instanceof AppCompatActivity)
             {
-              ((ActionBarActivity) getActivity()).getSupportActionBar().setTitle(webView.getTitle());
+              ((AppCompatActivity) getActivity()).getSupportActionBar().setTitle(webView.getTitle());
             }
             else if (getActivity() instanceof AppCompatActivity)
             {
@@ -308,9 +307,9 @@ public abstract class LegacyWebViewFragment<AggregateClass>
   {
     switch (layoutIdResource)
     {
-    case LayoutWebView:
-    default:
-      return getResources().getIdentifier("web_view", "layout", getActivity().getPackageName());
+      case LayoutWebView:
+      default:
+        return getResources().getIdentifier("web_view", "layout", getActivity().getPackageName());
     }
   }
 
@@ -319,30 +318,30 @@ public abstract class LegacyWebViewFragment<AggregateClass>
     final String resourceName;
     switch (layoutIdResource)
     {
-    case IdWebView:
-      resourceName = "webview";
-      break;
-    case IdLoading:
-      resourceName = "loading";
-      break;
-    case IdWebViewActionBar:
-      resourceName = "webViewActionBar";
-      break;
-    case IdTitle:
-      resourceName = "title";
-      break;
-    case IdPreviousButton:
-      resourceName = "previousButton";
-      break;
-    case IdNextButton:
-      resourceName = "nextButton";
-      break;
-    case IdRefreshButton:
-      resourceName = "refreshButton";
-      break;
-    default:
-      resourceName = "";
-      break;
+      case IdWebView:
+        resourceName = "webview";
+        break;
+      case IdLoading:
+        resourceName = "loading";
+        break;
+      case IdWebViewActionBar:
+        resourceName = "webViewActionBar";
+        break;
+      case IdTitle:
+        resourceName = "title";
+        break;
+      case IdPreviousButton:
+        resourceName = "previousButton";
+        break;
+      case IdNextButton:
+        resourceName = "nextButton";
+        break;
+      case IdRefreshButton:
+        resourceName = "refreshButton";
+        break;
+      default:
+        resourceName = "";
+        break;
     }
     return getResources().getIdentifier(resourceName, "id", getActivity().getPackageName());
   }
@@ -352,21 +351,21 @@ public abstract class LegacyWebViewFragment<AggregateClass>
     final String resourceName;
     switch (layoutIdResource)
     {
-    case StringBack:
-      resourceName = "WebView_back";
-      break;
-    case StringForward:
-      resourceName = "WebView_forward";
-      break;
-    case StringRefresh:
-      resourceName = "WebView_refresh";
-      break;
-    case StringOpenBrowser:
-      resourceName = "WebView_openBrowser";
-      break;
-    default:
-      resourceName = "";
-      break;
+      case StringBack:
+        resourceName = "WebView_back";
+        break;
+      case StringForward:
+        resourceName = "WebView_forward";
+        break;
+      case StringRefresh:
+        resourceName = "WebView_refresh";
+        break;
+      case StringOpenBrowser:
+        resourceName = "WebView_openBrowser";
+        break;
+      default:
+        resourceName = "";
+        break;
     }
     return getResources().getIdentifier(resourceName, "string", getActivity().getPackageName());
   }
@@ -376,27 +375,27 @@ public abstract class LegacyWebViewFragment<AggregateClass>
     final String resourceName;
     switch (layoutIdResource)
     {
-    case DrawableBarPreviousDefault:
-      resourceName = "ic_web_view_bar_previous_default";
-      break;
-    case DrawableBarNextDefault:
-      resourceName = "ic_web_view_bar_next_default";
-      break;
-    case DrawableBarPreviousDisabled:
-      resourceName = "ic_web_view_bar_previous_disabled";
-      break;
-    case DrawableBarNextDisabled:
-      resourceName = "ic_web_view_bar_next_disabled";
-      break;
-    case DrawableBarRefresh:
-      resourceName = "ic_bar_refresh";
-      break;
-    case DrawableBarOpenBrowser:
-      resourceName = "ic_bar_open_browser";
-      break;
-    default:
-      resourceName = "";
-      break;
+      case DrawableBarPreviousDefault:
+        resourceName = "ic_web_view_bar_previous_default";
+        break;
+      case DrawableBarNextDefault:
+        resourceName = "ic_web_view_bar_next_default";
+        break;
+      case DrawableBarPreviousDisabled:
+        resourceName = "ic_web_view_bar_previous_disabled";
+        break;
+      case DrawableBarNextDisabled:
+        resourceName = "ic_web_view_bar_next_disabled";
+        break;
+      case DrawableBarRefresh:
+        resourceName = "ic_bar_refresh";
+        break;
+      case DrawableBarOpenBrowser:
+        resourceName = "ic_bar_open_browser";
+        break;
+      default:
+        resourceName = "";
+        break;
     }
     return getResources().getIdentifier(resourceName, "drawable", getActivity().getPackageName());
   }
@@ -405,7 +404,7 @@ public abstract class LegacyWebViewFragment<AggregateClass>
   {
     try
     {
-      final ActionBar actionBar = ((ActionBarActivity) getActivity()).getSupportActionBar();
+      final ActionBar actionBar = ((AppCompatActivity) getActivity()).getSupportActionBar();
       if (actionBar.isShowing() == true)
       {
         actionBar.hide();
@@ -425,7 +424,7 @@ public abstract class LegacyWebViewFragment<AggregateClass>
   {
     try
     {
-      final ActionBar actionBar = ((ActionBarActivity) getActivity()).getSupportActionBar();
+      final ActionBar actionBar = ((AppCompatActivity) getActivity()).getSupportActionBar();
       if (actionBar.isShowing() == false)
       {
         actionBar.show();
