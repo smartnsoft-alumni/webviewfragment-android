@@ -389,12 +389,6 @@ public class WebViewFragment<AggregateClass>
     }
   }
 
-  protected void showErrorScreen()
-  {
-    errorAndRetry.setVisibility(View.VISIBLE);
-    loadingErrorAndRetry.setVisibility(View.VISIBLE);
-  }
-
   protected void showErrorScreen(int errorCode)
   {
     handleErrorCode(errorCode);
