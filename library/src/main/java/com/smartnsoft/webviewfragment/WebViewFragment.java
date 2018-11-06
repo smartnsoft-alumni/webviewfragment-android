@@ -100,6 +100,8 @@ public class WebViewFragment<AggregateClass>
 
   protected String defaultErrorMessage = null;
 
+  protected int errorWhileLoading = -100;
+
   @Override
   public void onCreate(Bundle savedInstanceState)
   {
@@ -507,7 +509,7 @@ public class WebViewFragment<AggregateClass>
         }
         else
         {
-          showErrorScreen(WebViewClient.ERROR_CONNECT);
+          showErrorScreen(errorWhileLoading);
         }
 
         refreshMenu();
@@ -518,17 +520,17 @@ public class WebViewFragment<AggregateClass>
       {
         super.onReceivedError(view, errorCode, description, failingUrl);
         errorWhenLoadingPage = true;
-        showErrorScreen(errorCode);
+        errorWhileLoading = errorCode;
         refreshMenu();
       }
 
       @TargetApi(Build.VERSION_CODES.M)
       @Override
-      public void onReceivedError(WebView view, WebResourceRequest request, WebResourceError error)
+      public void onReceivedError(WebView view, WebResourceRequest request, WebResourceError webSoWebResourceError)
       {
-        super.onReceivedError(view, request, error);
+        super.onReceivedError(view, request, webSoWebResourceError);
         errorWhenLoadingPage = true;
-        showErrorScreen(error.getErrorCode());
+        errorWhileLoading = webSoWebResourceError.getErrorCode();
         refreshMenu();
       }
     };
