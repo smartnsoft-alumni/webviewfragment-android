@@ -395,6 +395,13 @@ public class WebViewFragment<AggregateClass>
     loadingErrorAndRetry.setVisibility(View.VISIBLE);
   }
 
+  protected void showErrorScreen(int errorCode)
+  {
+    handleErrorCode(errorCode);
+    errorAndRetry.setVisibility(View.VISIBLE);
+    loadingErrorAndRetry.setVisibility(View.VISIBLE);
+  }
+
   protected void refresh()
   {
     if (hasConnectivity == true)
@@ -411,7 +418,7 @@ public class WebViewFragment<AggregateClass>
     }
     else
     {
-      showErrorScreen();
+      showErrorScreen(WebViewClient.ERROR_CONNECT);
     }
   }
 
@@ -506,7 +513,7 @@ public class WebViewFragment<AggregateClass>
         }
         else
         {
-          showErrorScreen();
+          showErrorScreen(WebViewClient.ERROR_CONNECT);
         }
 
         refreshMenu();
@@ -517,8 +524,7 @@ public class WebViewFragment<AggregateClass>
       {
         super.onReceivedError(view, errorCode, description, failingUrl);
         errorWhenLoadingPage = true;
-        handleErrorCode(errorCode);
-        showErrorScreen();
+        showErrorScreen(errorCode);
         refreshMenu();
       }
 
@@ -528,8 +534,7 @@ public class WebViewFragment<AggregateClass>
       {
         super.onReceivedError(view, request, error);
         errorWhenLoadingPage = true;
-        handleErrorCode(error.getErrorCode());
-        showErrorScreen();
+        showErrorScreen(error.getErrorCode());
         refreshMenu();
       }
     };
@@ -545,7 +550,7 @@ public class WebViewFragment<AggregateClass>
     }
     else
     {
-      showErrorScreen();
+      showErrorScreen(WebViewClient.ERROR_CONNECT);
     }
   }
 
