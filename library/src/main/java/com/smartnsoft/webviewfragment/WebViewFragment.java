@@ -39,6 +39,7 @@ import android.webkit.WebSettings;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
 import android.widget.Button;
+import android.widget.TextView;
 
 import com.smartnsoft.droid4me.LifeCycle.BusinessObjectsRetrievalAsynchronousPolicy;
 import com.smartnsoft.droid4me.support.v4.app.SmartFragment;
@@ -57,6 +58,10 @@ public class WebViewFragment<AggregateClass>
 
   public static final String SCREEN_TITLE_EXTRA = "screenTitleExtra";
 
+  public static final String DEFAULT_ERROR_MESSAGE_EXTRA = "defaultErrorMessageExtra";
+
+  public static final String ERROR_MESSAGES_TABLE_EXTRA = "errorMessagesTableExtra";
+
   //Views
   protected View loadingErrorAndRetry;
 
@@ -65,6 +70,8 @@ public class WebViewFragment<AggregateClass>
   protected WebView webView;
 
   protected Button retry;
+
+  protected TextView errorTextView;
 
   //webview state
   protected boolean webViewRestored = false;
@@ -88,6 +95,10 @@ public class WebViewFragment<AggregateClass>
   protected NetworkCallback networkCallback;
 
   protected Map<String, Boolean> networkStatus = new HashMap<>();
+
+  protected Map<Integer, String> errorMessagesTable = null;
+
+  protected String defaultErrorMessage = null;
 
   @Override
   public void onCreate(Bundle savedInstanceState)
@@ -121,6 +132,7 @@ public class WebViewFragment<AggregateClass>
     loadingErrorAndRetry = rootView.findViewById(R.id.loadingErrorAndRetry);
     errorAndRetry = rootView.findViewById(R.id.errorAndRetry);
     retry = rootView.findViewById(R.id.retry);
+    errorTextView = rootView.findViewById(R.id.errorText);
 
     retry.setOnClickListener(this);
 
@@ -259,6 +271,18 @@ public class WebViewFragment<AggregateClass>
       throws BusinessObjectUnavailableException
   {
     url = getActivity().getIntent().getStringExtra(WebViewFragment.PAGE_URL_EXTRA);
+    defaultErrorMessage = getActivity().getIntent().getStringExtra(WebViewFragment.DEFAULT_ERROR_MESSAGE_EXTRA);
+    try
+    {
+      errorMessagesTable = (Map<Integer, String>) getActivity().getIntent().getSerializableExtra(WebViewFragment.ERROR_MESSAGES_TABLE_EXTRA);
+    }
+    catch (ClassCastException exception)
+    {
+      if (log.isWarnEnabled())
+      {
+        log.warn("Error casting ERROR_MESSAGES_TABLE_EXTRA into Map<Integer, String>, exception = " + exception);
+      }
+    }
   }
 
   @Override
@@ -493,15 +517,18 @@ public class WebViewFragment<AggregateClass>
       {
         super.onReceivedError(view, errorCode, description, failingUrl);
         errorWhenLoadingPage = true;
+        handleErrorCode(errorCode);
         showErrorScreen();
         refreshMenu();
       }
 
+      @TargetApi(Build.VERSION_CODES.M)
       @Override
       public void onReceivedError(WebView view, WebResourceRequest request, WebResourceError error)
       {
         super.onReceivedError(view, request, error);
         errorWhenLoadingPage = true;
+        handleErrorCode(error.getErrorCode());
         showErrorScreen();
         refreshMenu();
       }
@@ -519,6 +546,18 @@ public class WebViewFragment<AggregateClass>
     else
     {
       showErrorScreen();
+    }
+  }
+
+  private void handleErrorCode(int errorCode)
+  {
+    if (errorMessagesTable != null && errorMessagesTable.containsKey(errorCode))
+    {
+      errorTextView.setText(errorMessagesTable.get(errorCode));
+    }
+    else if (defaultErrorMessage != null)
+    {
+      errorTextView.setText(defaultErrorMessage);
     }
   }
 
