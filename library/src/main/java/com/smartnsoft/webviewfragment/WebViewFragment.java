@@ -274,16 +274,10 @@ public class WebViewFragment<AggregateClass>
   {
     url = getActivity().getIntent().getStringExtra(WebViewFragment.PAGE_URL_EXTRA);
     defaultErrorMessage = getActivity().getIntent().getStringExtra(WebViewFragment.DEFAULT_ERROR_MESSAGE_EXTRA);
-    try
+    if (getActivity().getIntent().hasExtra(WebViewFragment.ERROR_MESSAGES_TABLE_EXTRA)
+        && getActivity().getIntent().getSerializableExtra(WebViewFragment.ERROR_MESSAGES_TABLE_EXTRA) instanceof Map)
     {
       errorMessagesTable = (Map<Integer, String>) getActivity().getIntent().getSerializableExtra(WebViewFragment.ERROR_MESSAGES_TABLE_EXTRA);
-    }
-    catch (ClassCastException exception)
-    {
-      if (log.isWarnEnabled())
-      {
-        log.warn("Error casting ERROR_MESSAGES_TABLE_EXTRA into Map<Integer, String>, exception = " + exception);
-      }
     }
   }
 
