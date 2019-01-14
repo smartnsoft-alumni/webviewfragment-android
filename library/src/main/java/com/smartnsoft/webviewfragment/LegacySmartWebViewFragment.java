@@ -6,9 +6,6 @@ import android.graphics.Bitmap;
 import android.net.Uri;
 import android.os.Build.VERSION;
 import android.os.Bundle;
-import android.support.v4.view.MenuItemCompat;
-import android.support.v7.app.ActionBar;
-import android.support.v7.app.AppCompatActivity;
 import android.view.GestureDetector;
 import android.view.LayoutInflater;
 import android.view.Menu;
@@ -24,6 +21,9 @@ import android.webkit.WebSettings.PluginState;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
 
+import androidx.appcompat.app.ActionBar;
+import androidx.appcompat.app.AppCompatActivity;
+
 import com.smartnsoft.droid4me.support.v4.app.SmartFragment;
 
 /**
@@ -31,7 +31,7 @@ import com.smartnsoft.droid4me.support.v4.app.SmartFragment;
  * @since 2014.04.21
  */
 @Deprecated
-public abstract class LegacyWebViewFragment<AggregateClass>
+public abstract class LegacySmartWebViewFragment<AggregateClass>
     extends SmartFragment<AggregateClass>
 {
 
@@ -58,11 +58,6 @@ public abstract class LegacyWebViewFragment<AggregateClass>
   private View loading;
 
   private boolean webViewRestored = false;
-
-  @Override
-  public void onRetrieveDisplayObjects()
-  {
-  }
 
   @SuppressWarnings("deprecation")
   @SuppressLint("SetJavaScriptEnabled")
@@ -122,7 +117,7 @@ public abstract class LegacyWebViewFragment<AggregateClass>
         }
       });
     }
-    getActivity().setTitle(getActivity().getIntent().getStringExtra(LegacyWebViewFragment.SCREEN_TITLE));
+    getActivity().setTitle(getActivity().getIntent().getStringExtra(LegacySmartWebViewFragment.SCREEN_TITLE));
     getActivity().supportInvalidateOptionsMenu();
     return view;
   }
@@ -146,10 +141,10 @@ public abstract class LegacyWebViewFragment<AggregateClass>
           return true;
         }
       });
-      // In order to be compatible with Android v2.3-: see
-      // http://stackoverflow.com/questions/17873648/android-support-library-actionbar-not-working-in-2-3-device
-      MenuItemCompat.setShowAsAction(menuItem, MenuItemCompat.SHOW_AS_ACTION_ALWAYS);
+
+      menuItem.setShowAsAction(MenuItem.SHOW_AS_ACTION_ALWAYS);
     }
+
     {
       final MenuItem menuItem = menu.add(Menu.NONE, Menu.NONE, Menu.NONE, getStringResourceId(LayoutViewStringDrawableResource.StringRefresh)).setIcon(
           getDrawableResourceId(LayoutViewStringDrawableResource.DrawableBarRefresh)).setOnMenuItemClickListener(new MenuItem.OnMenuItemClickListener()
@@ -161,8 +156,10 @@ public abstract class LegacyWebViewFragment<AggregateClass>
           return true;
         }
       });
-      MenuItemCompat.setShowAsAction(menuItem, MenuItemCompat.SHOW_AS_ACTION_ALWAYS);
+
+      menuItem.setShowAsAction(MenuItem.SHOW_AS_ACTION_ALWAYS);
     }
+
     {
       final MenuItem menuItem = menu.add(Menu.NONE, Menu.NONE, Menu.NONE, getStringResourceId(LayoutViewStringDrawableResource.StringForward)).setIcon(
           getDrawableResourceId(webView.canGoForward() == true ? LayoutViewStringDrawableResource.DrawableBarNextDefault
@@ -178,8 +175,10 @@ public abstract class LegacyWebViewFragment<AggregateClass>
           return true;
         }
       });
-      MenuItemCompat.setShowAsAction(menuItem, MenuItemCompat.SHOW_AS_ACTION_ALWAYS);
+
+      menuItem.setShowAsAction(MenuItem.SHOW_AS_ACTION_ALWAYS);
     }
+
     {
       final MenuItem menuItem = menu.add(Menu.NONE, Menu.NONE, Menu.NONE, getStringResourceId(LayoutViewStringDrawableResource.StringOpenBrowser)).setIcon(
           getDrawableResourceId(LayoutViewStringDrawableResource.DrawableBarOpenBrowser)).setOnMenuItemClickListener(new MenuItem.OnMenuItemClickListener()
@@ -202,15 +201,21 @@ public abstract class LegacyWebViewFragment<AggregateClass>
           return true;
         }
       });
-      MenuItemCompat.setShowAsAction(menuItem, MenuItemCompat.SHOW_AS_ACTION_ALWAYS);
+
+      menuItem.setShowAsAction(MenuItem.SHOW_AS_ACTION_ALWAYS);
     }
+  }
+
+  @Override
+  public void onRetrieveDisplayObjects()
+  {
   }
 
   @Override
   public void onRetrieveBusinessObjects()
       throws BusinessObjectUnavailableException
   {
-    url = getActivity().getIntent().getStringExtra(LegacyWebViewFragment.PAGE_URL);
+    url = getActivity().getIntent().getStringExtra(LegacySmartWebViewFragment.PAGE_URL);
   }
 
   @Override
@@ -249,7 +254,7 @@ public abstract class LegacyWebViewFragment<AggregateClass>
         super.onPageFinished(view, url);
         if (isAlive() == true)
         {
-          if (getActivity().getIntent().hasExtra(LegacyWebViewFragment.SCREEN_TITLE) == false)
+          if (getActivity().getIntent().hasExtra(LegacySmartWebViewFragment.SCREEN_TITLE) == false)
           {
             if (getActivity() instanceof AppCompatActivity)
             {
