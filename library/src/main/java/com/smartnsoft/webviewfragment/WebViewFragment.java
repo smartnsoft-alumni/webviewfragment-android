@@ -19,6 +19,7 @@ import android.net.Uri;
 import android.os.Build.VERSION;
 import android.os.Build.VERSION_CODES;
 import android.os.Bundle;
+import android.os.Message;
 import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.MenuInflater;
@@ -30,6 +31,7 @@ import android.view.animation.Animation;
 import android.view.animation.Animation.AnimationListener;
 import android.view.animation.AnimationUtils;
 import android.webkit.CookieManager;
+import android.webkit.WebChromeClient;
 import android.webkit.WebResourceError;
 import android.webkit.WebResourceRequest;
 import android.webkit.WebSettings;
@@ -147,8 +149,8 @@ public abstract class WebViewFragment
       CookieManager.getInstance().flush();
     }
 
-    final WebSettings webSettings = webView.getSettings();
-    webSettings.setJavaScriptEnabled(true);
+    webView.getSettings().setJavaScriptEnabled(true);
+    webView.getSettings().setSupportMultipleWindows(true);
 
     if (VERSION.SDK_INT >= VERSION_CODES.JELLY_BEAN)
     {
@@ -525,7 +527,24 @@ public abstract class WebViewFragment
       }
     };
 
+    final WebChromeClient webChromeClient = new WebChromeClient()
+    {
+
+      @Override
+      public boolean onCreateWindow(WebView view, boolean isDialog, boolean isUserGesture, Message resultMsg)
+      {
+        final WebView.HitTestResult result = view.getHitTestResult();
+        final String data = result.getExtra();
+
+        startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse(data)));
+
+        return false;
+      }
+
+    };
+
     webView.setWebViewClient(webViewClient);
+    webView.setWebChromeClient(webChromeClient);
 
     if (hasConnectivity == true)
     {
