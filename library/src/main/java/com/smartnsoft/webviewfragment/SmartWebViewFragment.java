@@ -16,6 +16,7 @@ import android.net.Network;
 import android.net.NetworkInfo;
 import android.net.NetworkRequest;
 import android.net.Uri;
+import android.os.Build;
 import android.os.Build.VERSION;
 import android.os.Build.VERSION_CODES;
 import android.os.Bundle;
@@ -41,17 +42,17 @@ import android.widget.Button;
 import android.widget.TextView;
 
 import androidx.appcompat.app.AppCompatActivity;
-import androidx.fragment.app.Fragment;
 
 import com.smartnsoft.droid4me.LifeCycle.BusinessObjectsRetrievalAsynchronousPolicy;
+import com.smartnsoft.droid4me.support.v4.app.SmartFragment;
 
 /**
  * @author Ludovic Roland
- * @since 2019.01.14
+ * @since 2016.06.03
  */
 @BusinessObjectsRetrievalAsynchronousPolicy
-public abstract class WebViewFragment
-    extends Fragment
+public class SmartWebViewFragment<AggregateClass>
+    extends SmartFragment<AggregateClass>
     implements OnClickListener
 {
 
@@ -113,7 +114,7 @@ public abstract class WebViewFragment
       hasConnectivity = false;
     }
 
-    if (VERSION.SDK_INT < VERSION_CODES.LOLLIPOP)
+    if (Build.VERSION.SDK_INT < Build.VERSION_CODES.LOLLIPOP)
     {
       registerBroadcastListenerOnCreate();
     }
@@ -159,7 +160,7 @@ public abstract class WebViewFragment
     }
 
     // Cache management
-    webView.getSettings().setAppCachePath(getContext().getCacheDir().getAbsolutePath());
+    webView.getSettings().setAppCachePath(getActivity().getApplicationContext().getCacheDir().getAbsolutePath());
     webView.getSettings().setAllowFileAccess(true);
     webView.getSettings().setAppCacheEnabled(true);
     webView.getSettings().setCacheMode(WebSettings.LOAD_DEFAULT);
@@ -174,9 +175,6 @@ public abstract class WebViewFragment
       webViewRestored = false;
     }
 
-    onRetrieveBusinessObjects();
-    onFulfillDisplayObjects();
-
     return rootView;
   }
 
@@ -190,7 +188,6 @@ public abstract class WebViewFragment
           .setIcon(webView.canGoBack() == true ? R.drawable.ic_web_view_bar_previous_default : R.drawable.ic_web_view_bar_previous_disabled)
           .setOnMenuItemClickListener(new MenuItem.OnMenuItemClickListener()
           {
-
             @Override
             public boolean onMenuItemClick(MenuItem menuItem)
             {
@@ -200,7 +197,6 @@ public abstract class WebViewFragment
               }
               return true;
             }
-
           });
 
       menuItem.setShowAsAction(MenuItem.SHOW_AS_ACTION_ALWAYS);
@@ -211,14 +207,12 @@ public abstract class WebViewFragment
           .setIcon(R.drawable.ic_bar_refresh)
           .setOnMenuItemClickListener(new MenuItem.OnMenuItemClickListener()
           {
-
             @Override
             public boolean onMenuItemClick(MenuItem menuItem)
             {
               webView.reload();
               return true;
             }
-
           });
 
       menuItem.setShowAsAction(MenuItem.SHOW_AS_ACTION_ALWAYS);
@@ -229,7 +223,6 @@ public abstract class WebViewFragment
           .setIcon(webView.canGoForward() == true ? R.drawable.ic_web_view_bar_next_default : R.drawable.ic_web_view_bar_next_disabled)
           .setOnMenuItemClickListener(new MenuItem.OnMenuItemClickListener()
           {
-
             @Override
             public boolean onMenuItemClick(MenuItem menuItem)
             {
@@ -239,7 +232,6 @@ public abstract class WebViewFragment
               }
               return true;
             }
-
           });
 
       menuItem.setShowAsAction(MenuItem.SHOW_AS_ACTION_ALWAYS);
@@ -250,7 +242,6 @@ public abstract class WebViewFragment
           .setIcon(R.drawable.ic_bar_open_browser)
           .setOnMenuItemClickListener(new MenuItem.OnMenuItemClickListener()
           {
-
             @Override
             public boolean onMenuItemClick(MenuItem menuItem)
             {
@@ -261,12 +252,13 @@ public abstract class WebViewFragment
               }
               catch (Exception exception)
               {
-                warn("Could not open the native browser application for displaying the Internet page with URL '" + url + "'", exception);
+                if (log.isWarnEnabled())
+                {
+                  log.warn("Could not open the native browser application for displaying the Internet page with URL '" + url + "'", exception);
+                }
               }
-
               return true;
             }
-
           });
 
       menuItem.setShowAsAction(MenuItem.SHOW_AS_ACTION_ALWAYS);
@@ -275,11 +267,61 @@ public abstract class WebViewFragment
   }
 
   @Override
+  public void onRetrieveDisplayObjects()
+  {
+
+  }
+
+  @Override
+  public void onRetrieveBusinessObjects()
+      throws BusinessObjectUnavailableException
+  {
+    url = getActivity().getIntent().getStringExtra(SmartWebViewFragment.PAGE_URL_EXTRA);
+    defaultErrorMessage = getActivity().getIntent().getStringExtra(SmartWebViewFragment.DEFAULT_ERROR_MESSAGE_EXTRA);
+
+    if (getActivity().getIntent().getSerializableExtra(SmartWebViewFragment.ERROR_MESSAGES_TABLE_EXTRA) instanceof Map)
+    {
+      errorMessagesTable = (Map<Integer, String>) getActivity().getIntent().getSerializableExtra(SmartWebViewFragment.ERROR_MESSAGES_TABLE_EXTRA);
+    }
+  }
+
+  @Override
+  public void onFulfillDisplayObjects()
+  {
+    if (getActivity().getIntent().hasExtra(SmartWebViewFragment.SCREEN_TITLE_EXTRA) == false)
+    {
+      try
+      {
+        if (getActivity() instanceof AppCompatActivity)
+        {
+          ((AppCompatActivity) getActivity()).getSupportActionBar().setTitle(webView.getTitle());
+        }
+      }
+      catch (Exception exception)
+      {
+        if (log.isWarnEnabled() == true)
+        {
+          log.warn("Cannot set the title", exception);
+        }
+      }
+    }
+
+    configureWebView();
+    refreshMenu();
+  }
+
+  @Override
+  public void onSynchronizeDisplayObjects()
+  {
+
+  }
+
+  @Override
   public void onDestroy()
   {
     super.onDestroy();
 
-    if (VERSION.SDK_INT < VERSION_CODES.LOLLIPOP)
+    if (Build.VERSION.SDK_INT < Build.VERSION_CODES.LOLLIPOP)
     {
       unregisterBroadcastListenerOnDestroy();
     }
@@ -304,40 +346,6 @@ public abstract class WebViewFragment
       refresh();
     }
   }
-
-  protected void onRetrieveBusinessObjects()
-  {
-    url = getArguments().getString(WebViewFragment.PAGE_URL_EXTRA);
-    defaultErrorMessage = getArguments().getString(WebViewFragment.DEFAULT_ERROR_MESSAGE_EXTRA);
-
-    if (getArguments().getSerializable(WebViewFragment.ERROR_MESSAGES_TABLE_EXTRA) instanceof Map)
-    {
-      errorMessagesTable = (Map<Integer, String>) getArguments().getSerializable(WebViewFragment.ERROR_MESSAGES_TABLE_EXTRA);
-    }
-  }
-
-  protected void onFulfillDisplayObjects()
-  {
-    if (getArguments().getString(WebViewFragment.SCREEN_TITLE_EXTRA, null) == null)
-    {
-      try
-      {
-        if (getActivity() instanceof AppCompatActivity)
-        {
-          ((AppCompatActivity) getActivity()).getSupportActionBar().setTitle(webView.getTitle());
-        }
-      }
-      catch (Exception exception)
-      {
-        warn("Cannot set the title", exception);
-      }
-    }
-
-    configureWebView();
-    refreshMenu();
-  }
-
-  protected abstract void warn(String message, Throwable throwable);
 
   protected void showLoadingScreen(boolean visible)
   {
@@ -428,9 +436,8 @@ public abstract class WebViewFragment
     if (networkCallback == null)
     {
       final NetworkRequest.Builder builder = new NetworkRequest.Builder();
-      networkCallback = new NetworkCallback()
+      networkCallback = new ConnectivityManager.NetworkCallback()
       {
-
         @Override
         public void onAvailable(Network network)
         {
@@ -444,7 +451,6 @@ public abstract class WebViewFragment
           networkStatus.remove(network.toString());
           hasConnectivity = networkStatus.containsValue(true);
         }
-
       };
 
       getConnectivityManager().registerNetworkCallback(builder.build(), networkCallback);
@@ -516,7 +522,7 @@ public abstract class WebViewFragment
         refreshMenu();
       }
 
-      @TargetApi(VERSION_CODES.M)
+      @TargetApi(Build.VERSION_CODES.M)
       @Override
       public void onReceivedError(WebView view, WebResourceRequest request, WebResourceError webSoWebResourceError)
       {
